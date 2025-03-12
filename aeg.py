@@ -96,6 +96,6 @@ if st.button("Process"):
             for point in feedback:
                 st.write(point)
 
-# Footer
-st.markdown("---")
-st.markdown("Developed with ❤️ by [Your Name]")
+# # Footer
+# st.markdown("---")
+# st.markdown("Developed with ❤️ by Karthik Gavini")
