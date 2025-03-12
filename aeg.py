@@ -2,6 +2,15 @@ import streamlit as st
 from PyPDF2 import PdfReader
 import docx
 
+# Hide the default Streamlit footer
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 # Function to extract text from uploaded files
 def extract_text_from_file(uploaded_file):
     if uploaded_file.type == "application/pdf":
@@ -100,11 +109,3 @@ if st.button("Process"):
 # st.markdown("---")
 # st.markdown("Developed with ❤️ by Karthik Gavini")
 
-# Hide the default Streamlit footer
-hide_streamlit_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True)
