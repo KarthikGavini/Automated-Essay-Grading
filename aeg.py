@@ -99,3 +99,12 @@ if st.button("Process"):
 # # Footer
 # st.markdown("---")
 # st.markdown("Developed with ❤️ by Karthik Gavini")
+
+# Hide the default Streamlit footer
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
