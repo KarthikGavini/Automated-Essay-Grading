@@ -9,7 +9,7 @@ from feedback import generate_feedback  # Import feedback generation logic
 from plagiarism_model import check_plagiarism  # Import plagiarism detection logic
 
 # Load the trained model and tokenizer for grading
-MODEL_PATH = "./final_model"  # Update this path if needed
+MODEL_PATH = "./final_model"  
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
 
