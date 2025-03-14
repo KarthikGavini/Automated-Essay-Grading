@@ -25,7 +25,7 @@ os.makedirs(MODEL_DIR_SCORING, exist_ok=True)
 os.makedirs(MODEL_DIR_FEEDBACK, exist_ok=True)
 
 # Step 5: Load Dataset
-data = pd.read_csv("prompt.tsv", delimiter='\t')  # Replace with your file path
+data = pd.read_csv("prompt.tsv", delimiter='\t')  
 
 # Select relevant columns
 data = data[['essay', 'content', 'organization', 'language', 'total',
