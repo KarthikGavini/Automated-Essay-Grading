@@ -1,0 +1,117 @@
+
+# Step 1: Install Required Libraries
+!pip install transformers nltk scikit-learn joblib tqdm
+
+# Step 2: Import Libraries
+import pandas as pd
+import numpy as np
+import re
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from sklearn.neighbors import NearestNeighbors
+from transformers import BertTokenizer, BertModel
+import joblib
+import os
+import shutil
+from google.colab import drive, files
+import nltk
+from tqdm import tqdm
+import torch
+
+# Check if GPU is available
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+# Download NLTK resources (run once)
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+# Step 3: Load Dataset
+def load_data():
+    # Replace "plagiarism_dataset.csv" with the path to your dataset
+    plagiarism_data = pd.read_csv("plagiarism_dataset.csv")
+    original_paragraphs = {i: row['Original_Text'] for i, row in plagiarism_data.iterrows()}
+    machine_paragraphs = {i: row['Machine_Text'] for i, row in plagiarism_data.iterrows()}
+    return original_paragraphs, machine_paragraphs
+
+# Step 4: Preprocessing Function
+def preprocess(text):
+    text = text.lower()
+    text = re.sub(r'[^\w\s]', '', text)
+    tokens = text.split()
+    stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if word not in stop_words]
+    lemmatizer = WordNetLemmatizer()
+    tokens = [lemmatizer.lemmatize(word) for word in tokens]
+    return ' '.join(tokens)
+
+# Step 5: Function to Get BERT Embeddings
+def get_bert_embedding(text, tokenizer, model):
+    inputs = tokenizer(text, return_tensors='pt', truncation=True, padding=True, max_length=512)
+    inputs = {key: val.to(device) for key, val in inputs.items()}  # Move inputs to GPU
+    with torch.no_grad():  # Disable gradient computation for inference
+        outputs = model(**inputs)
+    embedding = outputs.last_hidden_state.mean(dim=1).detach().cpu().numpy()  # Move embedding back to CPU
+    return embedding
+
+# Step 6: Initialize Plagiarism Detection (Precompute Data)
+def initialize_plagiarism_detection():
+    original_paragraphs, machine_paragraphs = load_data()
+    
+    # Preprocess texts
+    all_texts = list(original_paragraphs.values()) + list(machine_paragraphs.values())
+    preprocessed_texts = [preprocess(text) for text in all_texts]
+    
+    # Load BERT tokenizer and model
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    model = BertModel.from_pretrained('bert-base-uncased').to(device)  # Move model to GPU
+    
+    # Compute embeddings in batches with progress tracking
+    batch_size = 32
+    embeddings = []
+    for i in tqdm(range(0, len(preprocessed_texts), batch_size), desc="Processing Batches"):
+        batch_texts = preprocessed_texts[i:i + batch_size]
+        batch_embeddings = np.vstack([get_bert_embedding(text, tokenizer, model) for text in batch_texts])
+        embeddings.append(batch_embeddings)
+    
+    embeddings = np.vstack(embeddings)  # Combine all batch embeddings
+    
+    # Train NearestNeighbors model
+    nbrs = NearestNeighbors(n_neighbors=5, metric='cosine').fit(embeddings)
+    
+    # Save precomputed data to Google Drive
+    drive_path = "/content/drive/MyDrive/plagiarism_model"
+    os.makedirs(drive_path, exist_ok=True)
+    
+    joblib.dump(preprocessed_texts, f"{drive_path}/preprocessed_texts.joblib")
+    joblib.dump(embeddings, f"{drive_path}/embeddings.joblib")
+    joblib.dump(nbrs, f"{drive_path}/nearest_neighbors_model.joblib")
+    
+    print("Precomputed data saved to Google Drive successfully!")
+
+# Step 7: Compress Files into a Zip Archive
+def compress_and_download():
+    # Define the source folder (where the files are stored)
+    source_folder = "/content/drive/MyDrive/plagiarism_model"
+    
+    # Define the output zip file name
+    output_zip = "/content/plagiarism_model.zip"
+    
+    # Create a zip archive
+    shutil.make_archive(output_zip.replace(".zip", ""), 'zip', source_folder)
+    
+    print(f"Zip file created: {output_zip}")
+    
+    # Download the zip file
+    files.download(output_zip)
+
+# Step 8: Main Execution
+if __name__ == "__main__":
+    # Mount Google Drive
+    drive.mount('/content/drive')
+    
+    # Initialize plagiarism detection (this will save preprocessed_texts, embeddings, and the NearestNeighbors model)
+    initialize_plagiarism_detection()
+    
+    # Compress the files and download them as a single archive
+    compress_and_download()
